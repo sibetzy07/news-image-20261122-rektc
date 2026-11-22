@@ -1,26 +1,17 @@
-import { execFileSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+// news-image-20261122: copy the pre-rendered entry.png to the output dir.
+//
+// Pure Node.js: no network, no subprocess, no Python. The image is rendered
+// offline by draw.py (deterministic, stdlib-only) and committed as entry.png
+// next to this file; this program only copies those exact bytes, so the
+// output is byte-identical on every run.
+import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Entry for news-image-20261122: render the day's news image with draw.py
-// (pure Python standard library, no network) and write it to the output dir.
-const root = dirname(fileURLToPath(import.meta.url));
-const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? "out";
-mkdirSync(outDir, { recursive: true });
-const outPath = join(outDir, "entry.png");
-
-const draw = join(root, "draw.py");
-let lastError: unknown = null;
-for (const python of ["python3", "python"]) {
-  try {
-    execFileSync(python, [draw, outPath], { stdio: "inherit" });
-    lastError = null;
-    break;
-  } catch (err) {
-    lastError = err;
-  }
+const here = dirname(fileURLToPath(import.meta.url));
+const source = join(here, "entry.png");
+const outDir = resolve(process.env.MAKEFUN_OUTPUT_DIR || "out");
+if (!existsSync(outDir)) {
+  mkdirSync(outDir, { recursive: true });
 }
-if (lastError) {
-  throw lastError;
-}
+copyFileSync(source, join(outDir, "entry.png"));
